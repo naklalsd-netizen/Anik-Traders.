@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>গুদাম স্টক এন্ট্রি — অনিক ট্রেডার্স লিমিটেড (Admin)</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{ --bg:#f8f9ff; --card:#ffffff; --accent1:#4b0082; --accent2:#8a2be2; --muted:#6b6b83; }
+  *{box-sizing:border-box}
+  body{ margin:0; font-family:'Inter',system-ui,sans-serif; background: linear-gradient(180deg,#f3f0ff,#ece8ff); color:#0b0b27; -webkit-font-smoothing:antialiased; }
+  .top-info{ position:fixed; left:0; right:0; top:0; height:64px; background: linear-gradient(90deg,var(--accent1),var(--accent2)); color:#fff; display:flex; align-items:center; padding:0 18px; z-index:9999; box-shadow:0 8px 24px rgba(0,0,0,0.12); }
+  .brand{ font-weight:700; font-size:16px; margin-right:14px; display:flex; gap:10px; align-items:center; }
+  .top-left-actions{ display:flex; gap:8px; align-items:center; margin-right:12px; }
+  .running-wrap{ flex:1; overflow:hidden; position:relative; }
+  .running{ white-space:nowrap; display:inline-block; padding-left:100%; animation: scrollLeft 22s linear infinite; font-weight:600; }
+  @keyframes scrollLeft{ 0%{ transform:translateX(0%);} 100%{ transform:translateX(-100%);} }
+  .date-pill{ background:rgba(255,255,255,0.12); padding:8px 16px; border-radius:999px; font-weight:800; cursor:pointer; display:inline-flex; align-items:center; gap:10px; font-size:15px; }
+  .date-pill:hover{ background:rgba(255,255,255,0.18); }
+  main{ padding:96px 20px 40px; max-width:1200px; margin:0 auto; }
+  .hero{ display:flex; gap:20px; align-items:center; margin-bottom:18px; }
+  .title h1{ margin:0; font-size:22px; color:var(--accent1); }
+  .title p{ margin:6px 0 0; color:var(--muted); }
+  .grid{ display:grid; grid-template-columns:360px 1fr; gap:20px; align-items:start; }
+  .card{ background:var(--card); border-radius:12px; padding:18px; box-shadow:0 8px 24px rgba(4,23,22,0.06); border:1px solid rgba(2,96,84,0.04); }
+  label{ display:block; font-size:13px; color:#2b2b43; margin-bottom:6px; }
+  input, select{ width:100%; padding:10px 12px; border-radius:8px; border:1px solid #dfeffb; background:#fbfffe; font-size:14px; color:#062a27; }
+  .btn{ display:inline-flex; align-items:center; gap:8px; padding:8px 12px; border-radius:8px; border:none; cursor:pointer; font-weight:600; }
+  .btn-primary{ background: linear-gradient(90deg,var(--accent2),var(--accent1)); color:white; box-shadow:0 6px 18px rgba(75,0,130,0.15); }
+  .btn-ghost{ background:transparent; color:white; border:1px solid rgba(255,255,255,0.12); }
+  .btn-danger{ background:#ff6b6b; color:white; }
+  .totals{ display:flex; gap:12px; align-items:center; justify-content:space-between; margin-bottom:12px; }
+  table{ width:100%; border-collapse:collapse; font-size:14px; }
+  th,td{ padding:10px 8px; text-align:center; border-bottom:1px solid #eef6f5; }
+  thead th{ background: linear-gradient(90deg,#4b0082,#8a2be2); color:#fff; font-weight:600; border:none; }
+  tbody tr:hover{ background: linear-gradient(90deg, rgba(75,0,130,0.05), rgba(138,43,226,0.05)); }
+  .history-area{ max-height:430px; overflow:auto; border-radius:8px; border:1px solid #eef6f5; }
+  .top-actions{ display:flex; gap:10px; align-items:center; }
+  .small{ font-size:13px; color:var(--muted); }
+  .modal{ position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,0.5); z-index:20000; }
+  .modal .panel{ background:white; padding:20px; border-radius:10px; width:360px; box-shadow:0 10px 30px rgba(2,40,36,0.18); }
+  .flex{ display:flex; gap:10px; align-items:center; }
+  .chart-wrap{ margin-top:16px; display:flex; gap:12px; align-items:flex-start; flex-direction:column; }
+  canvas{ background:transparent; border-radius:8px; }
+  @media (max-width:980px){ .grid{ grid-template-columns:1fr; } }
+  @media (max-width:480px){ .brand{ display:none;} main{ padding-top:86px;} }
+</style>
+</head>
+<body>
+
+<!-- <-- IMPORTANT: Force logout on page load/refresh so user must re-login after refresh --> -->
+<script>
+  // Remove any previous session flag so page refresh ALWAYS logs out
+  sessionStorage.removeItem('adminLogged');
+</script>
+
+<div class="top-info" role="banner" aria-label="Top information bar">
+  <div class="top-left-actions" style="align-items:center;">
+    <div class="brand"> <span style="font-size:18px">🏷️</span><div>অনিক ট্রেডার্স লিমিটেড</div></div>
+    <!-- Login moved to top-left corner -->
+    <button id="loginBtnTop" class="btn btn-primary">🔑 লগইন</button>
+    <button id="changePassBtn" class="btn btn-ghost" style="display:none;">🔒 পাসওয়ার্ড চেঞ্জ</button>
+    <button id="historyToggle" class="btn btn-ghost" style="display:none;">📜 হিস্টোরি</button>
+  </div>
+
+  <div class="running-wrap" title="Hover to pause">
+    <div class="running" id="runningText">স্বাগতম — অনিক ট্রেডার্স; ঠিকানা: চন্দ্রকোনা বাজার, নকলা, শেরপুর | মোবাইল: +৮৮০১৬৩১১১০৭৫০</div>
+  </div>
+
+  <div style="display:flex; gap:12px; align-items:center;">
+    <div class="date-pill" id="datePill" title="তারিখ দেখুন বা ক্লিক করে ফিল্টার করুন"> <span id="bigDate">--</span> </div>
+    <div id="userBadge" class="small" style="min-width:140px; text-align:right;"></div>
+    <button id="logoutBtn" class="btn btn-ghost" style="display:none;">🔒 লগআউট</button>
+  </div>
+</div>
+
+<main>
+  <section class="hero">
+    <div class="title">
+      <h1>গুদাম স্টক ব্যবস্থাপনা</h1>
+    </div>
+    <div style="display:flex; gap:10px; align-items:center;">
+      <div class="small" id="currentTime"></div>
+    </div>
+  </section>
+
+  <div class="grid">
+    <div class="card" id="entryCard">
+      <h3 style="margin-top:0; color:var(--accent1)">স্টক এন্ট্রি করুন</h3>
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <label>পণ্য</label>
+        <select id="product"><option value="">-- পণ্য নির্বাচন করুন --</option><option>চাল</option><option>ধান</option><option>গম</option><option>আটা</option><option>কার্নেল</option><option>খালি বস্তা ৩০ কেজি</option><option>খালি বস্তা ৫০ কেজি</option></select>
+
+        <div class="flex">
+          <div style="flex:1"><label>পরিমাণ (মে.টন)</label><input id="quantity" type="number" step="0.001" placeholder="0.000" /></div>
+          <div style="width:120px"><label>বস্তা</label><input id="bags" type="number" placeholder="0" /></div>
+        </div>
+
+        <label>মোট মূল্য (৳)</label><input id="value" type="number" placeholder="0" />
+        <div class="flex"><div style="flex:1"><label>তারিখ</label><input id="entryDate" type="date" /></div><div style="width:140px"><label>কার্য</label><select id="action"><option value="add">স্টকে যোগ</option><option value="remove">স্টক থেকে নামান</option></select></div></div>
+        <label>রিমার্কস</label><input id="remark" type="text" placeholder="বর্ণনা / ক্রেতা ইত্যাদি" />
+
+        <div style="display:flex; gap:8px; margin-top:6px;"><button id="addBtn" class="btn btn-primary">✅ এন্ট্রি দিন</button><button id="resetBtn" class="btn btn-danger">🗑️ রিসেট</button></div>
+
+        <div class="small">পাসওয়ার্ড পরিবর্তন বা ডিলিট করার জন্য অ্যাডমিন লগইন প্রয়োজন হবে।</div>
+      </div>
+
+      <div class="chart-wrap" aria-hidden="false">
+        <h4 style="margin:12px 0 8px;">স্টক চার্ট (পরিমাণ)</h4>
+        <canvas id="stockChart" height="160"></canvas>
+        <div class="small">চার্ট রিফ্রেশ হবে যখন নতুন এন্ট্রি যোগ/বিয়োগ করবেন।</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <div class="totals"><div class="summary" id="totals">মোট: 0.000 মে.টন | 0 বস্তা | ৳0</div></div>
+        <div class="top-actions"><input id="filterDate" type="date" class="small" title="তারিখ দিয়ে ফিল্টার করুন" style="display:none;" />
+        </div>
+      </div>
+
+      <div style="margin-bottom:12px;">
+        <table id="stockTable" aria-label="Current stock table"><thead><tr><th>পণ্য</th><th>পরিমাণ</th><th>বস্তা</th><th>মূল্য (৳)</th></tr></thead><tbody></tbody></table>
+      </div>
+
+      <h4 style="margin:10px 0 8px;">লেনদেন হিস্ট্রি</h4>
+      <div class="history-area" id="historySection"><table id="historyTable" aria-label="History table"><thead><tr><th>ক্রম</th><th>তারিখ</th><th>পণ্য</th><th>পরিমাণ</th><th>বস্তা</th><th>মূল্য</th><th>ধরন</th><th>রিমার্কস</th><th>অ্যাকশন</th></tr></thead><tbody></tbody></table></div>
+    </div>
+  </div>
+</main>
+
+<!-- Modals -->
+<div class="modal" id="loginModal"><div class="panel"><h3>অ্যাডমিন লগইন</h3><label>ইউজারনেম</label><input id="loginUser" type="text" placeholder="admin" /><label>পাসওয়ার্ড</label><input id="loginPass" type="password" /><div style="display:flex; gap:8px; margin-top:10px;"><button id="doLogin" class="btn btn-primary">লগইন</button><button id="closeLogin" class="btn">বাতিল</button></div></div></div>
+
+<div class="modal" id="changePassModal"><div class="panel"><h3>পাসওয়ার্ড পরিবর্তন</h3><label>পুরনো পাসওয়ার্ড</label><input id="oldPass" type="password" /><label>নতুন পাসওয়ার্ড</label><input id="newPass" type="password" /><label>নতুন পাসওয়ার্ড (পুনরায়)</label><input id="newPass2" type="password" /><div style="display:flex; gap:8px; margin-top:10px;"><button id="doChangePass" class="btn btn-primary">চেঞ্জ করুন</button><button id="closeChange" class="btn">বাতিল</button></div></div></div>
+
+<div class="modal" id="editModal"><div class="panel"><h3>এন্ট্রি সম্পাদনা করুন</h3><label>পাসওয়ার্ড (অ্যাডমিন)</label><input id="editPass" type="password" /><label>পরিমাণ</label><input id="editQuantity" type="number" step="0.001" /><label>বস্তা</label><input id="editBags" type="number" /><label>মূল্য</label><input id="editValue" type="number" /><label>রিমার্কস</label><input id="editRemark" type="text" /><div style="display:flex; gap:8px; margin-top:10px;"><button id="saveEdit" class="btn btn-primary">সেভ</button><button id="closeEdit" class="btn">বাতিল</button></div></div></div>
+
+<!-- Libraries -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+<script>
+// --- Utilities ---
+const todayISO = ()=> new Date().toISOString().slice(0,10);
+function el(id){ return document.getElementById(id); }
+function showModal(id){ el(id).style.display='flex'; }
+function hideModal(id){ el(id).style.display='none'; }
+
+// --- Date/time ---
+function updateDateTime(){ const now=new Date(); el('bigDate').textContent = now.toLocaleDateString('bn-BD', {year:'numeric', month:'short', day:'numeric'}); el('currentTime').textContent = now.toLocaleTimeString('bn-BD'); }
+setInterval(updateDateTime,1000); updateDateTime();
+
+// --- Data ---
+let stock = JSON.parse(localStorage.getItem('stock') || '{}');
+let history = JSON.parse(localStorage.getItem('history') || '[]');
+let adminUser = localStorage.getItem('adminUser') || 'admin';
+let adminPass = localStorage.getItem('adminPass') || 'Anik7820**';
+let adminLogged = sessionStorage.getItem('adminLogged') === '1';
+
+// Elements
+const productEl = el('product'), qtyEl = el('quantity'), bagsEl = el('bags'), valueEl = el('value'), dateEl = el('entryDate'), remarkEl = el('remark'), actionEl = el('action'), addBtn = el('addBtn'), resetBtn = el('resetBtn'), stockTbody = document.querySelector('#stockTable tbody'), historyTbody = document.querySelector('#historyTable tbody'), totalsEl = el('totals'), filterDateEl = el('filterDate');
+
+// --- UI control: hide sensitive info before login ---
+function updateVisibility(){ const hidden = !adminLogged; // hide totals, stock table, history
+  el('totals').style.visibility = hidden ? 'hidden' : 'visible';
+  el('stockTable').style.display = hidden ? 'none' : 'table';
+  el('historySection').style.display = hidden ? 'none' : 'block';
+  el('loginBtnTop').style.display = adminLogged ? 'none' : 'inline-flex';
+  el('logoutBtn').style.display = adminLogged ? 'inline-flex' : 'none';
+  el('userBadge').textContent = adminLogged ? (adminUser+' (অ্যাডমিন)') : '';
+  el('changePassBtn').style.display = adminLogged ? 'inline-flex' : 'none';
+  el('historyToggle').style.display = adminLogged ? 'inline-flex' : 'none';
+  el('entryCard').style.opacity = adminLogged ? 1 : 0.6;
+}
+
+updateVisibility();
+
+// --- Auth ---
+el('loginBtnTop').addEventListener('click', ()=> showModal('loginModal'));
+el('closeLogin').addEventListener('click', ()=> hideModal('loginModal'));
+el('doLogin').addEventListener('click', ()=>{
+  const u = el('loginUser').value.trim(); const p = el('loginPass').value;
+  if(u === adminUser && p === adminPass){ adminLogged = true; sessionStorage.setItem('adminLogged','1'); hideModal('loginModal'); updateVisibility(); render(); refreshChart(); alert('সফলভাবে লগইন করেছেন'); }
+  else alert('ভুল ইউজার/পাসওয়ার্ড');
+});
+
+el('logoutBtn').addEventListener('click', ()=>{ if(confirm('লগআউট করবেন?')){ adminLogged=false; sessionStorage.removeItem('adminLogged'); updateVisibility(); render(); } });
+
+// change password modal
+el('changePassBtn').addEventListener('click', ()=> showModal('changePassModal'));
+el('closeChange').addEventListener('click', ()=> hideModal('changePassModal'));
+el('doChangePass').addEventListener('click', ()=>{
+  const oldP = el('oldPass').value; const newP = el('newPass').value; const newP2 = el('newPass2').value;
+  if(oldP !== adminPass){ alert('পুরনো পাসওয়ার্ড মেলে না'); return; }
+  if(!newP || newP !== newP2){ alert('নতুন পাসওয়ার্ড মিলছে না'); return; }
+  adminPass = newP; localStorage.setItem('adminPass', adminPass); hideModal('changePassModal'); alert('পাসওয়ার্ড সফলভাবে পরিবর্তন হয়েছে');
+});
+
+// history toggle (scroll to or collapse)
+let historyVisible=true;
+el('historyToggle').addEventListener('click', ()=>{
+  const sec = el('historySection'); if(sec.style.display==='none'){ sec.style.display='block'; sec.scrollIntoView({behavior:'smooth'}); } else { sec.style.display='none'; }
+});
+
+// price helpers
+const pricePerTon = {'ধান':36000,'চাল':53000,'গম':51000,'আটা':35000,'কার্নেল':20000,'খালি বস্তা ৩০ কেজি':50,'খালি বস্তা ৫০ কেজি':50};
+const bagRatio = 25;
+function calculateAuto(){ const product=productEl.value; const qty=parseFloat(qtyEl.value)||0; if(!product) return; if(product.includes('খালি বস্তা')||product==='কার্নেল'){ valueEl.value=(qty*50).toFixed(2); bagsEl.value=Math.round(qty); } else { valueEl.value=Math.round((pricePerTon[product]||0)*qty); bagsEl.value=Math.round(qty*bagRatio); } }
+productEl.addEventListener('change', calculateAuto); qtyEl.addEventListener('input', calculateAuto);
+
+// core
+function saveAll(){ localStorage.setItem('stock', JSON.stringify(stock)); localStorage.setItem('history', JSON.stringify(history)); }
+function addStock(){
+  if(!adminLogged){ if(!confirm('আপনি অ্যাডমিন লগইন করতে চান?')) return; showModal('loginModal'); return; }
+  const product=productEl.value.trim(); const qty=parseFloat(qtyEl.value); const bags=parseInt(bagsEl.value); const value=parseFloat(valueEl.value); const remark=remarkEl.value.trim(); const action=actionEl.value; const date=dateEl.value||todayISO();
+  if(!product||!qty||isNaN(qty)||isNaN(bags)||isNaN(value)){ alert('সব ঘর সঠিকভাবে পূরণ করুন।'); return; }
+  if(!stock[product]) stock[product]={quantity:0,bags:0,value:0};
+  if(action==='add'){ stock[product].quantity+=qty; stock[product].bags+=bags; stock[product].value+=value; } else { stock[product].quantity-=qty; stock[product].bags-=bags; stock[product].value-=value; }
+  history.push({ date, product, quantity:qty, bags, value, type: action==='add'?'গুদামে ঢুকেছে':'গুদাম থেকে বের হয়েছে', remark });
+  saveAll(); render(); refreshChart();
+  qtyEl.value=''; bagsEl.value=''; valueEl.value=''; remarkEl.value=''; dateEl.value=''; productEl.value='';
+}
+
+// render
+function render(filterDate=''){
+  stockTbody.innerHTML=''; historyTbody.innerHTML=''; let totalMT=0,totalBags=0,totalValue=0;
+  Object.keys(stock).forEach(p=>{ const s=stock[p]; const tr=document.createElement('tr'); tr.innerHTML=`<td>${p}</td><td>${s.quantity.toFixed(3)}</td><td>${s.bags}</td><td>${Math.round(s.value)}</td>`; stockTbody.appendChild(tr); totalMT+=s.quantity; totalBags+=s.bags; totalValue+=s.value; });
+  totalsEl.textContent=`মোট: ${totalMT.toFixed(3)} মে.টন | ${totalBags} বস্তা | ৳${Math.round(totalValue)}`;
+  const list=[...history].reverse(); let idx=1; list.forEach((h,i)=>{ if(filterDate && h.date!==filterDate) return; const tr=document.createElement('tr'); tr.innerHTML=`<td>${idx++}</td><td>${h.date}</td><td>${h.product}</td><td>${h.quantity}</td><td>${h.bags}</td><td>${h.value}</td><td>${h.type}</td><td>${h.remark}</td><td>${adminLogged?`<button class='btn' data-idx='${history.length-1-i}'>✏️ এডিট</button>`:'-'}</td>`; historyTbody.appendChild(tr); });
+  // attach edit listeners
+  document.querySelectorAll('#historyTable button[data-idx]').forEach(b=> b.addEventListener('click', ()=> openEdit(parseInt(b.getAttribute('data-idx')))));
+}
+
+// filter
+filterDateEl.addEventListener('change', ()=> render(filterDateEl.value));
+
+// reset
+resetBtn.addEventListener('click', ()=>{ if(!adminLogged){ alert('শুধু অ্যাডমিন রিসেট করতে পারবেন।'); return; } const pwd=prompt('রিসেট করতে অ্যাডমিন পাসওয়ার্ড দিন:'); if(pwd===adminPass){ if(confirm('আপনি নিশ্চিত রিসেট চান? সব ডাটা মুছে যাবে।')){ localStorage.removeItem('stock'); localStorage.removeItem('history'); stock={}; history=[]; saveAll(); render(); refreshChart(); alert('সফলভাবে রিসেট হয়েছে।'); } } else alert('ভুল পাসওয়ার্ড!'); });
+
+// edit modal
+let editingIndex = null;
+function openEdit(idx){ if(!adminLogged){ alert('অ্যাডমিন লগইন দরকার'); return; } editingIndex=idx; const h = history[idx]; el('editQuantity').value=h.quantity; el('editBags').value=h.bags; el('editValue').value=h.value; el('editRemark').value=h.remark; showModal('editModal'); }
+el('closeEdit').addEventListener('click', ()=> hideModal('editModal'));
+el('saveEdit').addEventListener('click', ()=>{ const pass = el('editPass').value; if(pass!==adminPass){ alert('ভুল পাসওয়ার্ড'); return; } const q=parseFloat(el('editQuantity').value); const b=parseInt(el('editBags').value); const v=parseFloat(el('editValue').value); const r=el('editRemark').value.trim(); if(!q||isNaN(q)||isNaN(b)||isNaN(v)){ alert('সব ঘর পূরণ করুন'); return; } const h = history[editingIndex]; // revert old
+  const prod = h.product; if(h.type==='গুদামে ঢুকেছে'){ stock[prod].quantity -= h.quantity; stock[prod].bags -= h.bags; stock[prod].value -= h.value; } else { stock[prod].quantity += h.quantity; stock[prod].bags += h.bags; stock[prod].value += h.value; } // apply new
+  h.quantity=q; h.bags=b; h.value=v; h.remark=r; if(h.type==='গুদামে ঢুকেছে'){ stock[prod].quantity += q; stock[prod].bags += b; stock[prod].value += v; } else { stock[prod].quantity -= q; stock[prod].bags -= b; stock[prod].value -= v; } saveAll(); render(); refreshChart(); hideModal('editModal'); });
+
+// chart
+let stockChart=null;
+function refreshChart(){
+  const labels = Object.keys(stock);
+  const data = labels.map(l => +(stock[l].quantity.toFixed(3)));
+  const ctx = document.getElementById('stockChart').getContext('2d');
+  if(stockChart) stockChart.destroy();
+  stockChart = new Chart(ctx, { type:'bar', data:{ labels, datasets:[{ label:'মে.টন (Quantity)', data }] }, options:{ responsive:true, plugins:{legend:{display:false}, tooltip:{mode:'index'}}, scales:{ y:{ beginAtZero:true } } } });
+}
+
+// init
+el('addBtn').addEventListener('click', addStock);
+render(); refreshChart();
+
+// clicking date pill toggles filter input show/focus
+el('datePill').addEventListener('click', ()=>{ const fd = el('filterDate'); fd.style.display = fd.style.display==='inline-flex' || fd.style.display==='inline-block' ? 'none' : 'inline-block'; if(fd.style.display!=='none'){ fd.focus(); } });
+
+// small accessibility
+document.getElementById('runningText').tabIndex = 0;
+document.getElementById('runningText').addEventListener('focus', ()=> document.getElementById('runningText').style.animationPlayState='paused');
+document.getElementById('runningText').addEventListener('blur', ()=> document.getElementById('runningText').style.animationPlayState='running');
+
+// double-click brand to update admin user/pass (keeps current behavior)
+document.querySelector('.brand').addEventListener('dblclick', ()=>{
+  const newUser = prompt('নতুন অ্যাডমিন ইউজার নাম (খালি বাদ দিলে আগের থাকবে):', adminUser);
+  const newPass = prompt('নতুন পাসওয়ার্ড (খালি দিলে আগের থাকবে):', adminPass);
+  if(newUser) { adminUser = newUser; localStorage.setItem('adminUser', adminUser); }
+  if(newPass) { adminPass = newPass; localStorage.setItem('adminPass', adminPass); alert('অ্যাডমিন কোড আপডেট হয়েছে'); }
+});
+
+// update UI initially
+updateVisibility();
+</script>
+</body>
+</html>
